@@ -40,6 +40,21 @@ app.get("/protected", async (req, res) => {
     user: session.user,
   });
 });
+
+app.get("/check", async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: req.headers,
+  });
+
+  if (!session) {
+    return res.status(401).json({ status: "Auth not working" });
+  }
+
+  return res.json({
+    status: "BetterAuth working",
+    user: session.user,
+  });
+});
 // ✅ Error handler should be last middleware
 app.use(errorHandler);
 
