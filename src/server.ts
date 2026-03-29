@@ -1,4 +1,6 @@
 import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
 import { errorHandler } from "./middleware/errorHandler.js";
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
@@ -8,6 +10,7 @@ import { swaggerSpec, swaggerUi } from "./lib/swagger.js";
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // 🔥 Mount better-auth
 
 app.use(
@@ -26,6 +29,39 @@ app.get("/", (req, res) => {
   res.send("API is running");
 });
 
+app.post("/api/auth/resend-verification", async (req, res) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
+
+    if (!session) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (session.user.emailVerified) {
+      return res.status(400).json({
+        message: "Email already verified",
+      });
+    }
+
+    await auth.api.sendVerificationEmail({
+      headers: req.headers,
+      body: {
+        email: session.user.email,
+      },
+    });
+
+    return res.json({
+      message: "Verification email sent",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(400).json({
+      message: "Failed to resend verification email",
+    });
+  }
+});
 app.get("/protected", async (req, res) => {
   const session = await auth.api.getSession({
     headers: req.headers,
