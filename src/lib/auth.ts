@@ -53,6 +53,7 @@ export const auth = betterAuth({
       url: string;
     }) => {
       await transporter.sendMail({
+        from: '"Better Auth" <no-reply@lab.pitron-halomot.org>',
         to: user.email,
         subject: "Reset your password",
         html: `

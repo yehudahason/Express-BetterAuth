@@ -19,36 +19,28 @@ app.use(
     credentials: true,
   }),
 );
-
-app.all("/api/auth/{*any}", toNodeHandler(auth));
-// 🔥 Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// Optional test route
-app.get("/", (req, res) => {
-  res.send("API is running");
-});
-
 app.post("/api/auth/resend-verification", async (req, res) => {
+  const { email } = req.body;
   try {
     const session = await auth.api.getSession({
       headers: req.headers,
     });
 
-    if (!session) {
+    if (session) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (session.user.emailVerified) {
-      return res.status(400).json({
-        message: "Email already verified",
-      });
-    }
+    // if (!session.user.emailVerified) {
+    //   return res.status(400).json({
+    //     message: "Email already verified",
+    //   });
+    // }
 
     await auth.api.sendVerificationEmail({
       headers: req.headers,
       body: {
-        email: session.user.email,
+        email,
+        callbackURL: "/",
       },
     });
 
@@ -62,6 +54,16 @@ app.post("/api/auth/resend-verification", async (req, res) => {
     });
   }
 });
+
+app.all("/api/auth/{*any}", toNodeHandler(auth));
+// 🔥 Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Optional test route
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+
 app.get("/protected", async (req, res) => {
   const session = await auth.api.getSession({
     headers: req.headers,
