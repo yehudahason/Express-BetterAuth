@@ -26,15 +26,11 @@ app.post("/api/auth/resend-verification", async (req, res) => {
       headers: req.headers,
     });
 
-    if (session) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (session?.user.emailVerified) {
+      return res.status(400).json({
+        message: "Email already verified",
+      });
     }
-
-    // if (!session.user.emailVerified) {
-    //   return res.status(400).json({
-    //     message: "Email already verified",
-    //   });
-    // }
 
     await auth.api.sendVerificationEmail({
       headers: req.headers,
