@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma.js";
+import { prisma } from "./prisma";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
@@ -19,10 +19,17 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  map: {
+    user: "users",
+    session: "sessions",
+    account: "accounts",
+    verification: "verifications",
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
   },
+  baseURL: process.env.BETTER_AUTH_URL,
 
   emailVerification: {
     autoSignInAfterVerification: true,
@@ -34,7 +41,7 @@ export const auth = betterAuth({
       url: string;
     }) => {
       await transporter.sendMail({
-        from: '"Better Auth" <no-reply@lab.pitron-halomot.org>',
+        from: '"Better Auth" <no-reply@pitron-halomot.org>',
         to: user.email,
         subject: "Verify your email",
         html: `
@@ -54,7 +61,7 @@ export const auth = betterAuth({
       url: string;
     }) => {
       await transporter.sendMail({
-        from: '"Better Auth" <no-reply@lab.pitron-halomot.org>',
+        from: '"Better Auth" <no-reply@pitron-halomot.org>',
         to: user.email,
         subject: "Reset your password",
         html: `
