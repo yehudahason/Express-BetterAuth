@@ -1,53 +1,70 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
+import { Pool } from "pg";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: Number(process.env.SMTP_PORT) === 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  ...(process.env.NODE_ENV === "development" && {
+    logger: true,
+    debug: true,
+  }),
 });
 
+async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}) {
+  return transporter.sendMail({
+    from: `"Better Auth" <${process.env.SMTP_ADMIN_EMAIL}>`,
+    to,
+    subject,
+    text,
+    html,
+  });
+}
+
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: "postgresql",
+  database: new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: true }
+        : false,
   }),
-  map: {
-    user: "users",
-    session: "sessions",
-    account: "accounts",
-    verification: "verifications",
-  },
+  // Advanced mapping to ensure Prisma field names match Better Auth logic
+
+  baseURL: process.env.BETTER_AUTH_URL,
+  secret: process.env.BETTER_AUTH_SECRET,
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
   },
-  baseURL: process.env.BETTER_AUTH_URL,
 
   emailVerification: {
     autoSignInAfterVerification: true,
-    sendVerificationEmail: async ({
-      user,
-      url,
-    }: {
-      user: { email: string };
-      url: string;
-    }) => {
-      await transporter.sendMail({
-        from: '"Better Auth" <no-reply@pitron-halomot.org>',
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
         to: user.email,
         subject: "Verify your email",
-        html: `
-          <h1>Verify your account</h1>
-          <a href="${url}">Click here to verify</a>
-        `,
+        text: `Verify your account: ${url}`,
+        html: `<p>Please verify your account: <a href="${url}">Verify Email</a></p>`,
       });
     },
   },
@@ -57,19 +74,15 @@ export const auth = betterAuth({
       user,
       url,
     }: {
-      user: { email: string };
+      user: any;
       url: string;
     }) => {
-      await transporter.sendMail({
-        from: '"Better Auth" <no-reply@pitron-halomot.org>',
+      await sendEmail({
         to: user.email,
         subject: "Reset your password",
-        html: `
-          <h1>Reset Password</h1>
-          <a href="${url}">Reset your password</a>
-        `,
+        text: `Reset your password: ${url}`,
+        html: `<p>Reset your password: <a href="${url}">Reset Password</a></p>`,
       });
     },
   },
-  secret: process.env.BETTER_AUTH_SECRET,
 });
