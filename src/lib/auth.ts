@@ -1,7 +1,11 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+// If your Prisma file is located elsewhere, you can change the path
+import { PrismaClient } from "@prisma/client";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { prisma } from "./prisma";
 
 dotenv.config();
 
@@ -40,15 +44,7 @@ async function sendEmail({
 }
 
 export const auth = betterAuth({
-  database: new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl:
-      process.env.NODE_ENV === "production"
-        ? { rejectUnauthorized: true }
-        : false,
-  }),
-  // Advanced mapping to ensure Prisma field names match Better Auth logic
-
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
 
