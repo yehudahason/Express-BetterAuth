@@ -1,1 +1,1 @@
-## Starter for express.js with better-auth
+## Starter for Express.js with better-auth
